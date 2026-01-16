@@ -167,6 +167,23 @@
       margin-bottom: 12px;
       font-weight: 600;
     }
+    .weather-row {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      border: 1px solid #90caf9;
+    }
+    .weather-row .value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .weather-icon {
+      font-size: 24px;
+    }
+    .weather-details {
+      font-size: 13px;
+      color: #666;
+      font-weight: normal;
+    }
   </style>
 </head>
 <body>
@@ -263,6 +280,111 @@
       return "webcal://calendar.google.com/calendar/ical/" + encodeURIComponent(calendarId) + "/public/basic.ics";
     }
 
+    // Weather code to emoji and description mapping
+    const weatherCodes = {
+      0: { icon: '☀️', desc: 'Clear sky' },
+      1: { icon: '🌤️', desc: 'Mainly clear' },
+      2: { icon: '⛅', desc: 'Partly cloudy' },
+      3: { icon: '☁️', desc: 'Overcast' },
+      45: { icon: '🌫️', desc: 'Foggy' },
+      48: { icon: '🌫️', desc: 'Icy fog' },
+      51: { icon: '🌧️', desc: 'Light drizzle' },
+      53: { icon: '🌧️', desc: 'Drizzle' },
+      55: { icon: '🌧️', desc: 'Heavy drizzle' },
+      56: { icon: '🌨️', desc: 'Freezing drizzle' },
+      57: { icon: '🌨️', desc: 'Heavy freezing drizzle' },
+      61: { icon: '🌧️', desc: 'Light rain' },
+      63: { icon: '🌧️', desc: 'Rain' },
+      65: { icon: '🌧️', desc: 'Heavy rain' },
+      66: { icon: '🌨️', desc: 'Freezing rain' },
+      67: { icon: '🌨️', desc: 'Heavy freezing rain' },
+      71: { icon: '🌨️', desc: 'Light snow' },
+      73: { icon: '🌨️', desc: 'Snow' },
+      75: { icon: '❄️', desc: 'Heavy snow' },
+      77: { icon: '🌨️', desc: 'Snow grains' },
+      80: { icon: '🌧️', desc: 'Light showers' },
+      81: { icon: '🌧️', desc: 'Showers' },
+      82: { icon: '⛈️', desc: 'Heavy showers' },
+      85: { icon: '🌨️', desc: 'Light snow showers' },
+      86: { icon: '🌨️', desc: 'Snow showers' },
+      95: { icon: '⛈️', desc: 'Thunderstorm' },
+      96: { icon: '⛈️', desc: 'Thunderstorm with hail' },
+      99: { icon: '⛈️', desc: 'Severe thunderstorm' }
+    };
+
+    // Fetch weather for game time (using Open-Meteo API - free, no key required)
+    async function getWeatherForGame(event) {
+      try {
+        // Get location from event
+        const locationStr = event.location;
+        if (!locationStr) return null;
+        
+        // Geocode the location using Nominatim (OpenStreetMap) - free, no key required
+        const geocodeUrl = "https://nominatim.openstreetmap.org/search" +
+          "?q=" + encodeURIComponent(locationStr) +
+          "&format=json" +
+          "&limit=1";
+        
+        const geocodeResponse = await fetch(geocodeUrl, {
+          headers: {
+            'User-Agent': 'BasketballStatus/1.0'
+          }
+        });
+        
+        if (!geocodeResponse.ok) return null;
+        const geocodeData = await geocodeResponse.json();
+        
+        if (!geocodeData || geocodeData.length === 0) return null;
+        
+        const lat = parseFloat(geocodeData[0].lat);
+        const lon = parseFloat(geocodeData[0].lon);
+        
+        // Get the game start time
+        const gameTime = event.start.dateTime ? new Date(event.start.dateTime) : new Date(event.start.date);
+        const today = new Date();
+        
+        // Only fetch weather if game is within 7 days (forecast limit)
+        const daysUntil = Math.ceil((gameTime - today) / (1000 * 60 * 60 * 24));
+        if (daysUntil > 7 || daysUntil < 0) {
+          return null;
+        }
+        
+        const dateStr = gameTime.toISOString().split('T')[0];
+        const hour = gameTime.getHours();
+        
+        const weatherUrl = "https://api.open-meteo.com/v1/forecast" +
+          "?latitude=" + lat +
+          "&longitude=" + lon +
+          "&hourly=temperature_2m,weather_code,precipitation_probability" +
+          "&timezone=America/Toronto" +
+          "&start_date=" + dateStr +
+          "&end_date=" + dateStr;
+        
+        const response = await fetch(weatherUrl);
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        
+        // Find the hour closest to game time
+        const hourIndex = Math.min(hour, 23);
+        const temp = Math.round(data.hourly.temperature_2m[hourIndex]);
+        const code = data.hourly.weather_code[hourIndex];
+        const precipProb = data.hourly.precipitation_probability[hourIndex];
+        
+        const weather = weatherCodes[code] || { icon: '🌡️', desc: 'Unknown' };
+        
+        return {
+          temp: temp,
+          icon: weather.icon,
+          desc: weather.desc,
+          precipProb: precipProb
+        };
+      } catch (err) {
+        console.error("Weather fetch error:", err);
+        return null;
+      }
+    }
+
     // Helper: Check if event is basketball-related
     function isBasketballEvent(event) {
       const title = (event.summary || "").toLowerCase();
@@ -336,7 +458,7 @@
     }
 
     // Render game info rows with action buttons
-    function renderGameInfo(game, showDate) {
+    function renderGameInfo(game, showDate, weather) {
       const time = formatTime(game);
       const location = game.location || "Location TBD";
       const title = game.summary || "Basketball Game";
@@ -368,8 +490,22 @@
         '<span class="emoji">&#x1F4CD;</span>' +
         '<span class="label">Location:</span>' +
         '<span class="value">' + location + '</span>' +
-        '</div>' +
-        '<div class="action-buttons">';
+        '</div>';
+      
+      // Add weather row if available
+      if (weather) {
+        html += '<div class="info-row weather-row">' +
+          '<span class="emoji">&#x1F321;&#xFE0F;</span>' +
+          '<span class="label">Weather:</span>' +
+          '<span class="value">' +
+          '<span class="weather-icon">' + weather.icon + '</span>' +
+          '<span>' + weather.temp + '°C ' + weather.desc + '</span>' +
+          '<span class="weather-details">(' + weather.precipProb + '% precip)</span>' +
+          '</span>' +
+          '</div>';
+      }
+      
+      html += '<div class="action-buttons">';
       
       if (mapsUrl) {
         html += '<a href="' + mapsUrl + '" target="_blank" class="action-btn maps">&#x1F5FA;&#xFE0F; ' + mapsLabel + '</a>';
@@ -417,10 +553,14 @@
         if (todayGames.length > 0) {
           const game = todayGames[0];
           currentGame = game;
+          
+          // Fetch weather for game time
+          const weather = await getWeatherForGame(game);
+          
           wrapper.classList.add("game-on");
           el.innerHTML = '<span class="icon">&#x1F3C0;</span>' +
             '<h2>Game Tonight!</h2>' +
-            renderGameInfo(game, false) +
+            renderGameInfo(game, false, weather) +
             renderSubscribeSection();
         } else {
           const futureStart = new Date();
@@ -443,13 +583,16 @@
             currentGame = nextGame;
             const daysUntil = getDaysUntil(nextGame);
             const daysText = daysUntil === 1 ? "1 day" : daysUntil + " days";
+            
+            // Fetch weather for upcoming game (if within 7 days)
+            const weather = await getWeatherForGame(nextGame);
 
             el.innerHTML = '<span class="icon">&#x1F634;</span>' +
               '<h2>No Game Today</h2>' +
               '<p class="subtitle">Next game in ' + daysText + '</p>' +
               '<div class="next-game">' +
               '<div class="next-game-label">Upcoming Game</div>' +
-              renderGameInfo(nextGame, true) +
+              renderGameInfo(nextGame, true, weather) +
               '</div>' +
               renderSubscribeSection();
           } else {
