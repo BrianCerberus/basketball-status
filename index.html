@@ -5,74 +5,330 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Basketball Status</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: transparent;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 32px 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .card h2 {
+      margin: 0 0 20px 0;
+      font-size: 26px;
+      color: #1a1a2e;
+      font-weight: 700;
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 12px 16px;
+      margin: 8px 0;
+      background: #f8f9fa;
+      border-radius: 12px;
+      font-size: 16px;
+      color: #333;
+    }
+    .info-row .emoji {
       font-size: 20px;
+      margin-right: 12px;
+      min-width: 24px;
+    }
+    .info-row .label {
+      color: #666;
+      margin-right: 8px;
+    }
+    .info-row .value {
       font-weight: 600;
-      line-height: 1.6;
+      color: #1a1a2e;
+    }
+    .game-on .card::before {
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    }
+    .game-on .icon { animation: bounce 1s ease infinite; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .no-game .card::before {
+      background: linear-gradient(90deg, #ff9800, #ffc107);
+    }
+    .next-game {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 2px dashed #e0e0e0;
+    }
+    .next-game-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .next-game .info-row {
+      background: #fff8e1;
+    }
+    .error .card::before {
+      background: linear-gradient(90deg, #f44336, #e91e63);
+    }
+    .loading .card {
+      color: #666;
+    }
+    .loading .icon {
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .subtitle {
+      color: #666;
+      font-size: 15px;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="card" id="status">
-    Checking today’s basketball status…
+  <div class="loading" id="wrapper">
+    <div class="card" id="status">
+      <span class="icon">🔄</span>
+      <h2>Checking Schedule...</h2>
+      <p class="subtitle">Loading basketball status</p>
+    </div>
   </div>
 
   <script>
     const calendarId =
       "6b2ffcbd02ff052bd40ff5e2ed7c01082c2017740b3c044a55088cf02f3f4972@group.calendar.google.com";
 
+    // Note: This API key is restricted to Calendar API and your GitHub Pages domain only
     const apiKey = "AIzaSyCOx2fmGOLBiVTCIpd06hTKb-Vx-bSi68g";
 
     const tz = "America/Toronto";
 
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
+    // Helper: Check if event is basketball-related
+    function isBasketballEvent(event) {
+      const title = (event.summary || "").toLowerCase();
+      return title.includes("basketball") || 
+             title.includes("game") || 
+             title.includes("tuesday game");
+    }
 
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
+    // Helper: Format time from event
+    function formatTime(event) {
+      if (event.start.dateTime) {
+        return new Date(event.start.dateTime).toLocaleTimeString("en-CA", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+      return "All day";
+    }
 
-    const url =
-      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events` +
-      `?key=${apiKey}` +
-      `&timeMin=${start.toISOString()}` +
-      `&timeMax=${end.toISOString()}` +
-      `&singleEvents=true` +
-      `&orderBy=startTime` +
-      `&timeZone=${tz}`;
+    // Helper: Format date for display
+    function formatDate(event) {
+      const dateStr = event.start.dateTime || event.start.date;
+      const date = new Date(dateStr);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        const el = document.getElementById("status");
+      // Check if it's today or tomorrow
+      if (date.toDateString() === today.toDateString()) {
+        return "Today";
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return "Tomorrow";
+      }
+      
+      return date.toLocaleDateString("en-CA", {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+      });
+    }
 
-        if (!data.items || data.items.length === 0) {
-          el.innerHTML = "❌ <b>No basketball today</b>";
-          return;
+    // Helper: Get days until event
+    function getDaysUntil(event) {
+      const dateStr = event.start.dateTime || event.start.date;
+      const eventDate = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      eventDate.setHours(0, 0, 0, 0);
+      const diffTime = eventDate - today;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    // Build API URL
+    function buildUrl(startDate, endDate) {
+      return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events` +
+        `?key=${apiKey}` +
+        `&timeMin=${startDate.toISOString()}` +
+        `&timeMax=${endDate.toISOString()}` +
+        `&singleEvents=true` +
+        `&orderBy=startTime` +
+        `&timeZone=${encodeURIComponent(tz)}`;
+    }
+
+    // Render game info rows
+    function renderGameInfo(game, showDate = false) {
+      const time = formatTime(game);
+      const location = game.location || "Location TBD";
+      const title = game.summary || "Basketball Game";
+      
+      let html = '';
+      
+      if (showDate) {
+        const dateDisplay = formatDate(game);
+        html += `
+          <div class="info-row">
+            <span class="emoji">📅</span>
+            <span class="label">Date:</span>
+            <span class="value">${dateDisplay}</span>
+          </div>
+        `;
+      }
+      
+      html += `
+        <div class="info-row">
+          <span class="emoji">📋</span>
+          <span class="label">Event:</span>
+          <span class="value">${title}</span>
+        </div>
+        <div class="info-row">
+          <span class="emoji">⏰</span>
+          <span class="label">Time:</span>
+          <span class="value">${time}</span>
+        </div>
+        <div class="info-row">
+          <span class="emoji">📍</span>
+          <span class="label">Location:</span>
+          <span class="value">${location}</span>
+        </div>
+      `;
+      
+      return html;
+    }
+
+    async function checkBasketballStatus() {
+      const wrapper = document.getElementById("wrapper");
+      const el = document.getElementById("status");
+
+      try {
+        // Get today's date range
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        // Fetch today's events
+        const todayResponse = await fetch(buildUrl(todayStart, todayEnd));
+        if (!todayResponse.ok) throw new Error(`HTTP ${todayResponse.status}`);
+        const todayData = await todayResponse.json();
+        
+        if (todayData.error) {
+          throw new Error(todayData.error.message || "Calendar API error");
         }
 
-        const e = data.items[0];
-        const time = e.start.dateTime
-          ? new Date(e.start.dateTime).toLocaleTimeString("en-CA", {
-              hour: "2-digit",
-              minute: "2-digit"
-            })
-          : "All day";
+        // Find basketball events today
+        const todayGames = (todayData.items || []).filter(isBasketballEvent);
 
+        wrapper.classList.remove("loading");
+
+        if (todayGames.length > 0) {
+          // Game today!
+          const game = todayGames[0];
+          wrapper.classList.add("game-on");
+          el.innerHTML = `
+            <span class="icon">🏀</span>
+            <h2>Game Tonight!</h2>
+            ${renderGameInfo(game)}
+          `;
+        } else {
+          // No game today - fetch upcoming games (next 60 days)
+          const futureStart = new Date();
+          futureStart.setDate(futureStart.getDate() + 1);
+          futureStart.setHours(0, 0, 0, 0);
+          
+          const futureEnd = new Date();
+          futureEnd.setDate(futureEnd.getDate() + 60);
+
+          const futureResponse = await fetch(buildUrl(futureStart, futureEnd));
+          if (!futureResponse.ok) throw new Error(`HTTP ${futureResponse.status}`);
+          const futureData = await futureResponse.json();
+
+          const upcomingGames = (futureData.items || []).filter(isBasketballEvent);
+
+          wrapper.classList.add("no-game");
+
+          if (upcomingGames.length > 0) {
+            const nextGame = upcomingGames[0];
+            const daysUntil = getDaysUntil(nextGame);
+            const daysText = daysUntil === 1 ? "1 day" : `${daysUntil} days`;
+
+            el.innerHTML = `
+              <span class="icon">😴</span>
+              <h2>No Game Today</h2>
+              <p class="subtitle">Next game in ${daysText}</p>
+              <div class="next-game">
+                <div class="next-game-label">Upcoming Game</div>
+                ${renderGameInfo(nextGame, true)}
+              </div>
+            `;
+          } else {
+            el.innerHTML = `
+              <span class="icon">📭</span>
+              <h2>No Games Scheduled</h2>
+              <p class="subtitle">No upcoming games found in the next 60 days</p>
+            `;
+          }
+        }
+      } catch (err) {
+        wrapper.classList.remove("loading");
+        wrapper.classList.add("error");
         el.innerHTML = `
-          🏀 <b>Basketball today</b><br>
-          ⏰ ${time}<br>
-          📍 ${e.location || "Location not set"}
+          <span class="icon">⚠️</span>
+          <h2>Unable to Load</h2>
+          <p class="subtitle">Could not fetch calendar data.<br>Please try again later.</p>
         `;
-      })
-      .catch(() => {
-        document.getElementById("status").innerText =
-          "Unable to load calendar";
-      });
+        console.error("Calendar fetch error:", err);
+      }
+    }
+
+    // Run on page load
+    checkBasketballStatus();
   </script>
 </body>
 </html>
