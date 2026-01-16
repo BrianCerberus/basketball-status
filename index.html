@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Basketball Status</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: transparent;
+    }
+    .card {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="status">
+    Checking today’s basketball status…
+  </div>
+
+  <script>
+    const calendarId =
+      "6b2ffcbd02ff052bd40ff5e2ed7c01082c2017740b3c044a55088cf02f3f4972@group.calendar.google.com";
+
+    const apiKey = "AIzaSyCOx2fmGOLBiVTCIpd06hTKb-Vx-bSi68g";
+
+    const tz = "America/Toronto";
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const url =
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events` +
+      `?key=${apiKey}` +
+      `&timeMin=${start.toISOString()}` +
+      `&timeMax=${end.toISOString()}` +
+      `&singleEvents=true` +
+      `&orderBy=startTime` +
+      `&timeZone=${tz}`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById("status");
+
+        if (!data.items || data.items.length === 0) {
+          el.innerHTML = "❌ <b>No basketball today</b>";
+          return;
+        }
+
+        const e = data.items[0];
+        const time = e.start.dateTime
+          ? new Date(e.start.dateTime).toLocaleTimeString("en-CA", {
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+          : "All day";
+
+        el.innerHTML = `
+          🏀 <b>Basketball today</b><br>
+          ⏰ ${time}<br>
+          📍 ${e.location || "Location not set"}
+        `;
+      })
+      .catch(() => {
+        document.getElementById("status").innerText =
+          "Unable to load calendar";
+      });
+  </script>
+</body>
+</html>
