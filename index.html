@@ -121,6 +121,40 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .btn-navigate {
+      background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+      color: white;
+    }
+    .btn-calendar {
+      background: linear-gradient(135deg, #34a853 0%, #1e8e3e 100%);
+      color: white;
+    }
+    .btn .btn-icon {
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -278,6 +312,61 @@
       return "Unknown";
     }
 
+    // Generate Google Maps URL
+    function getMapsUrl(location) {
+      if (!location) return null;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+    }
+
+    // Generate Google Calendar add event URL
+    function getCalendarUrl(game) {
+      const title = encodeURIComponent(game.summary || "Basketball Game");
+      const location = encodeURIComponent(game.location || "");
+      const details = encodeURIComponent(game.description || "");
+      
+      // Format dates for Google Calendar (YYYYMMDDTHHmmssZ)
+      let dates = "";
+      if (game.start.dateTime && game.end.dateTime) {
+        const start = new Date(game.start.dateTime).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const end = new Date(game.end.dateTime).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        dates = `${start}/${end}`;
+      } else if (game.start.date) {
+        // All-day event
+        const start = game.start.date.replace(/-/g, '');
+        const end = game.end.date.replace(/-/g, '');
+        dates = `${start}/${end}`;
+      }
+      
+      return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`;
+    }
+
+    // Render action buttons
+    function renderButtons(game) {
+      const mapsUrl = getMapsUrl(game.location);
+      const calendarUrl = getCalendarUrl(game);
+      
+      let html = '<div class="button-row">';
+      
+      if (mapsUrl) {
+        html += `
+          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-navigate">
+            <span class="btn-icon">🧭</span>
+            Navigate
+          </a>
+        `;
+      }
+      
+      html += `
+        <a href="${calendarUrl}" target="_blank" rel="noopener" class="btn btn-calendar">
+          <span class="btn-icon">📅</span>
+          Add to Calendar
+        </a>
+      `;
+      
+      html += '</div>';
+      return html;
+    }
+
     // Build Calendar API URL
     function buildUrl(startDate, endDate) {
       return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events` +
@@ -390,6 +479,7 @@
               </div>
             </div>
             <div class="info-grid">${gameInfo}</div>
+            ${renderButtons(game)}
           `;
         } else {
           // Fetch upcoming games (next 60 days)
@@ -423,6 +513,7 @@
               <div class="next-game">
                 <div class="next-game-label">Upcoming Game</div>
                 <div class="info-grid">${gameInfo}</div>
+                ${renderButtons(nextGame)}
               </div>
             `;
           } else {
