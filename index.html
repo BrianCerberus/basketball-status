@@ -7,112 +7,104 @@
   <style>
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
     }
     body {
+      margin: 0;
+      padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
-      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .card {
       background: #ffffff;
-      border-radius: 16px;
-      padding: 16px 20px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      max-width: 100%;
+      border-radius: 20px;
+      padding: 32px 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
     }
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #eee;
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
     }
     .icon {
-      font-size: 40px;
-      line-height: 1;
+      font-size: 64px;
+      margin-bottom: 16px;
+      display: block;
     }
-    .header-text h2 {
-      font-size: 18px;
+    .card h2 {
+      margin: 0 0 20px 0;
+      font-size: 26px;
       color: #1a1a2e;
       font-weight: 700;
-      margin-bottom: 2px;
-    }
-    .header-text .subtitle {
-      font-size: 13px;
-      color: #666;
-    }
-    .game-on .header {
-      border-bottom-color: #4CAF50;
-    }
-    .game-on .icon {
-      animation: bounce 1s ease infinite;
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-4px); }
-    }
-    .no-game .header {
-      border-bottom-color: #ff9800;
-    }
-    .error .header {
-      border-bottom-color: #f44336;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
     }
     .info-row {
       display: flex;
       align-items: center;
-      padding: 8px 10px;
+      justify-content: flex-start;
+      padding: 12px 16px;
+      margin: 8px 0;
       background: #f8f9fa;
-      border-radius: 8px;
-      font-size: 13px;
-    }
-    .info-row.full-width {
-      grid-column: 1 / -1;
+      border-radius: 12px;
+      font-size: 16px;
+      color: #333;
     }
     .info-row .emoji {
-      font-size: 14px;
-      margin-right: 8px;
-      min-width: 18px;
+      font-size: 20px;
+      margin-right: 12px;
+      min-width: 24px;
     }
     .info-row .label {
-      color: #888;
-      margin-right: 4px;
-      font-size: 11px;
-      text-transform: uppercase;
+      color: #666;
+      margin-right: 8px;
     }
     .info-row .value {
       font-weight: 600;
       color: #1a1a2e;
     }
-    .weather-row {
-      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    .game-on .card::before {
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    }
+    .game-on .icon { animation: bounce 1s ease infinite; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .no-game .card::before {
+      background: linear-gradient(90deg, #ff9800, #ffc107);
     }
     .next-game {
-      margin-top: 12px;
-      padding-top: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
       border-top: 2px dashed #e0e0e0;
     }
     .next-game-label {
-      font-size: 11px;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: #888;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       font-weight: 600;
     }
     .next-game .info-row {
       background: #fff8e1;
     }
-    .next-game .weather-row {
-      background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    .error .card::before {
+      background: linear-gradient(90deg, #f44336, #e91e63);
+    }
+    .loading .card {
+      color: #666;
     }
     .loading .icon {
       animation: spin 1.5s linear infinite;
@@ -121,64 +113,155 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    .button-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
+    .subtitle {
+      color: #666;
+      font-size: 15px;
+      margin-top: 8px;
     }
-    .btn {
-      flex: 1;
+    .action-buttons {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
       justify-content: center;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
       gap: 6px;
-      padding: 10px 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
       font-weight: 600;
       text-decoration: none;
       cursor: pointer;
-      transition: transform 0.1s, opacity 0.1s;
+      border: none;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn:active {
-      transform: scale(0.97);
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
-    .btn-navigate {
-      background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+    .action-btn.maps {
+      background: linear-gradient(135deg, #4285f4, #34a853);
       color: white;
     }
-    .btn-calendar {
-      background: linear-gradient(135deg, #34a853 0%, #1e8e3e 100%);
+    .action-btn.calendar {
+      background: linear-gradient(135deg, #ea4335, #fbbc05);
       color: white;
     }
-    .btn .btn-icon {
-      font-size: 14px;
+    .action-btn.subscribe {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+    .subscribe-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 2px dashed #e0e0e0;
+    }
+    .subscribe-section .section-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 12px;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
   <div class="loading" id="wrapper">
     <div class="card" id="status">
-      <div class="header">
-        <span class="icon">🔄</span>
-        <div class="header-text">
-          <h2>Checking Schedule...</h2>
-          <span class="subtitle">Loading basketball status</span>
-        </div>
-      </div>
+      <span class="icon">&#x1F504;</span>
+      <h2>Checking Schedule...</h2>
+      <p class="subtitle">Loading basketball status</p>
     </div>
   </div>
 
   <script>
     const calendarId =
       "6b2ffcbd02ff052bd40ff5e2ed7c01082c2017740b3c044a55088cf02f3f4972@group.calendar.google.com";
+
+    // Note: This API key is restricted to Calendar API and your GitHub Pages domain only
     const apiKey = "AIzaSyCOx2fmGOLBiVTCIpd06hTKb-Vx-bSi68g";
+
     const tz = "America/Toronto";
 
-    // Default coordinates for Waterloo, ON
-    const DEFAULT_LAT = 43.4643;
-    const DEFAULT_LON = -80.5204;
+    // Detect iOS for Apple Maps vs Google Maps
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // Helper: Generate maps URL (Apple Maps for iOS, Google Maps otherwise)
+    function getMapsUrl(location) {
+      if (!location) return null;
+      const encoded = encodeURIComponent(location);
+      if (isIOS) {
+        return "maps://maps.apple.com/?q=" + encoded;
+      }
+      return "https://www.google.com/maps/search/?api=1&query=" + encoded;
+    }
+
+    // Helper: Generate ICS file content for calendar event
+    function generateICS(event) {
+      const title = event.summary || "Basketball Game";
+      const location = event.location || "";
+      const description = event.description || "";
+      
+      function formatICSDate(dateStr) {
+        const d = new Date(dateStr);
+        return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      }
+      
+      let dtStart, dtEnd;
+      if (event.start.dateTime) {
+        dtStart = formatICSDate(event.start.dateTime);
+        dtEnd = formatICSDate(event.end.dateTime);
+      } else {
+        dtStart = event.start.date.replace(/-/g, '');
+        dtEnd = event.end.date.replace(/-/g, '');
+      }
+      
+      const uid = dtStart + "-" + Math.random().toString(36).substr(2, 9) + "@basketball";
+      
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Basketball Status//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        'UID:' + uid,
+        'DTSTAMP:' + formatICSDate(new Date().toISOString()),
+        event.start.dateTime ? 'DTSTART:' + dtStart : 'DTSTART;VALUE=DATE:' + dtStart,
+        event.start.dateTime ? 'DTEND:' + dtEnd : 'DTEND;VALUE=DATE:' + dtEnd,
+        'SUMMARY:' + title,
+        location ? 'LOCATION:' + location : '',
+        description ? 'DESCRIPTION:' + description.replace(/\n/g, '\\n') : '',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].filter(function(line) { return line; });
+      
+      return lines.join('\r\n');
+    }
+
+    // Helper: Download ICS file
+    function downloadICS(event) {
+      const ics = generateICS(event);
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'basketball-game.ics';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Get subscribe URL for the calendar (webcal:// works on iOS, macOS, Outlook)
+    function getSubscribeUrl() {
+      return "webcal://calendar.google.com/calendar/ical/" + encodeURIComponent(calendarId) + "/public/basic.ics";
+    }
 
     // Helper: Check if event is basketball-related
     function isBasketballEvent(event) {
@@ -188,14 +271,16 @@
              title.includes("tuesday game");
     }
 
-    // Helper: Format time (e.g., "7:30 PM")
-    function formatTime(dateStr) {
-      if (!dateStr) return "TBD";
-      return new Date(dateStr).toLocaleTimeString("en-CA", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true
-      });
+    // Helper: Format time from event
+    function formatTime(event) {
+      if (event.start.dateTime) {
+        return new Date(event.start.dateTime).toLocaleTimeString("en-CA", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+      return "All day";
     }
 
     // Helper: Format date for display
@@ -206,28 +291,17 @@
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (date.toDateString() === today.toDateString()) return "Today";
-      if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+      if (date.toDateString() === today.toDateString()) {
+        return "Today";
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return "Tomorrow";
+      }
       
       return date.toLocaleDateString("en-CA", {
-        weekday: "short",
+        weekday: "long",
         month: "short",
         day: "numeric"
       });
-    }
-
-    // Helper: Calculate duration in minutes
-    function getDuration(startStr, endStr) {
-      if (!startStr || !endStr) return null;
-      const start = new Date(startStr);
-      const end = new Date(endStr);
-      const mins = Math.round((end - start) / 60000);
-      if (mins >= 60) {
-        const hrs = Math.floor(mins / 60);
-        const remainMins = mins % 60;
-        return remainMins > 0 ? `${hrs}h ${remainMins}m` : `${hrs}h`;
-      }
-      return `${mins}m`;
     }
 
     // Helper: Get days until event
@@ -237,213 +311,85 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       eventDate.setHours(0, 0, 0, 0);
-      return Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+      const diffTime = eventDate - today;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Geocode address to lat/lon using Nominatim
-    async function geocodeAddress(address) {
-      if (!address) return { lat: DEFAULT_LAT, lon: DEFAULT_LON };
-      
-      try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
-        const response = await fetch(url, {
-          headers: { 'User-Agent': 'BasketballStatusApp/1.0' }
-        });
-        const data = await response.json();
-        
-        if (data && data.length > 0) {
-          return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        }
-      } catch (e) {
-        console.warn("Geocoding failed:", e);
-      }
-      
-      return { lat: DEFAULT_LAT, lon: DEFAULT_LON };
-    }
-
-    // Fetch weather for a specific location and time
-    async function getWeather(lat, lon, targetTime) {
-      try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weathercode&timezone=${encodeURIComponent(tz)}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.hourly && data.hourly.time) {
-          // Find the closest hour to the target time
-          const targetHour = new Date(targetTime);
-          targetHour.setMinutes(0, 0, 0);
-          const targetIso = targetHour.toISOString().slice(0, 13);
-          
-          const idx = data.hourly.time.findIndex(t => t.startsWith(targetIso.slice(0, 13)));
-          
-          if (idx !== -1) {
-            return {
-              temp: Math.round(data.hourly.temperature_2m[idx]),
-              code: data.hourly.weathercode[idx]
-            };
-          }
-        }
-      } catch (e) {
-        console.warn("Weather fetch failed:", e);
-      }
-      return null;
-    }
-
-    // Convert weather code to emoji
-    function weatherEmoji(code) {
-      if (code === 0) return "☀️";
-      if (code <= 3) return "⛅";
-      if (code <= 49) return "🌫️";
-      if (code <= 69) return "🌧️";
-      if (code <= 79) return "🌨️";
-      if (code <= 99) return "⛈️";
-      return "🌡️";
-    }
-
-    // Convert weather code to description
-    function weatherDesc(code) {
-      if (code === 0) return "Clear";
-      if (code <= 3) return "Partly Cloudy";
-      if (code <= 49) return "Foggy";
-      if (code <= 59) return "Drizzle";
-      if (code <= 69) return "Rain";
-      if (code <= 79) return "Snow";
-      if (code <= 99) return "Thunderstorm";
-      return "Unknown";
-    }
-
-    // Generate Google Maps URL
-    function getMapsUrl(location) {
-      if (!location) return null;
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
-    }
-
-    // Generate Google Calendar add event URL
-    function getCalendarUrl(game) {
-      const title = encodeURIComponent(game.summary || "Basketball Game");
-      const location = encodeURIComponent(game.location || "");
-      const details = encodeURIComponent(game.description || "");
-      
-      // Format dates for Google Calendar (YYYYMMDDTHHmmssZ)
-      let dates = "";
-      if (game.start.dateTime && game.end.dateTime) {
-        const start = new Date(game.start.dateTime).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-        const end = new Date(game.end.dateTime).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-        dates = `${start}/${end}`;
-      } else if (game.start.date) {
-        // All-day event
-        const start = game.start.date.replace(/-/g, '');
-        const end = game.end.date.replace(/-/g, '');
-        dates = `${start}/${end}`;
-      }
-      
-      return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`;
-    }
-
-    // Render action buttons
-    function renderButtons(game) {
-      const mapsUrl = getMapsUrl(game.location);
-      const calendarUrl = getCalendarUrl(game);
-      
-      let html = '<div class="button-row">';
-      
-      if (mapsUrl) {
-        html += `
-          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-navigate">
-            <span class="btn-icon">🧭</span>
-            Navigate
-          </a>
-        `;
-      }
-      
-      html += `
-        <a href="${calendarUrl}" target="_blank" rel="noopener" class="btn btn-calendar">
-          <span class="btn-icon">📅</span>
-          Add to Calendar
-        </a>
-      `;
-      
-      html += '</div>';
-      return html;
-    }
-
-    // Build Calendar API URL
+    // Build API URL
     function buildUrl(startDate, endDate) {
-      return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events` +
-        `?key=${apiKey}` +
-        `&timeMin=${startDate.toISOString()}` +
-        `&timeMax=${endDate.toISOString()}` +
-        `&singleEvents=true` +
-        `&orderBy=startTime` +
-        `&timeZone=${encodeURIComponent(tz)}`;
+      return "https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calendarId) + "/events" +
+        "?key=" + apiKey +
+        "&timeMin=" + startDate.toISOString() +
+        "&timeMax=" + endDate.toISOString() +
+        "&singleEvents=true" +
+        "&orderBy=startTime" +
+        "&timeZone=" + encodeURIComponent(tz);
     }
 
-    // Render game info
-    async function renderGameInfo(game, showDate = false) {
-      const startTime = formatTime(game.start.dateTime);
-      const endTime = formatTime(game.end.dateTime);
-      const duration = getDuration(game.start.dateTime, game.end.dateTime);
+    // Store current game for ICS download
+    let currentGame = null;
+
+    function downloadCurrentGameICS() {
+      if (currentGame) {
+        downloadICS(currentGame);
+      }
+    }
+
+    // Render game info rows with action buttons
+    function renderGameInfo(game, showDate) {
+      const time = formatTime(game);
       const location = game.location || "Location TBD";
       const title = game.summary || "Basketball Game";
-
-      // Get weather for game time and location
-      const coords = await geocodeAddress(location);
-      const weather = game.start.dateTime ? await getWeather(coords.lat, coords.lon, game.start.dateTime) : null;
-
+      const mapsUrl = getMapsUrl(game.location);
+      const mapsLabel = isIOS ? "Apple Maps" : "Google Maps";
+      
       let html = '';
-
+      
       if (showDate) {
-        html += `
-          <div class="info-row full-width">
-            <span class="emoji">📅</span>
-            <span class="label">Date</span>
-            <span class="value">${formatDate(game)}</span>
-          </div>
-        `;
+        const dateDisplay = formatDate(game);
+        html += '<div class="info-row">' +
+          '<span class="emoji">&#x1F4C5;</span>' +
+          '<span class="label">Date:</span>' +
+          '<span class="value">' + dateDisplay + '</span>' +
+          '</div>';
       }
-
-      html += `
-        <div class="info-row full-width">
-          <span class="emoji">📋</span>
-          <span class="label">Event</span>
-          <span class="value">${title}</span>
-        </div>
-        <div class="info-row">
-          <span class="emoji">🕐</span>
-          <span class="label">Start</span>
-          <span class="value">${startTime}</span>
-        </div>
-        <div class="info-row">
-          <span class="emoji">🕑</span>
-          <span class="label">End</span>
-          <span class="value">${endTime}</span>
-        </div>
-        <div class="info-row">
-          <span class="emoji">⏱️</span>
-          <span class="label">Duration</span>
-          <span class="value">${duration || "TBD"}</span>
-        </div>
-      `;
-
-      if (weather) {
-        html += `
-          <div class="info-row weather-row">
-            <span class="emoji">${weatherEmoji(weather.code)}</span>
-            <span class="label">Weather</span>
-            <span class="value">${weather.temp}°C ${weatherDesc(weather.code)}</span>
-          </div>
-        `;
+      
+      html += '<div class="info-row">' +
+        '<span class="emoji">&#x1F4CB;</span>' +
+        '<span class="label">Event:</span>' +
+        '<span class="value">' + title + '</span>' +
+        '</div>' +
+        '<div class="info-row">' +
+        '<span class="emoji">&#x23F0;</span>' +
+        '<span class="label">Time:</span>' +
+        '<span class="value">' + time + '</span>' +
+        '</div>' +
+        '<div class="info-row">' +
+        '<span class="emoji">&#x1F4CD;</span>' +
+        '<span class="label">Location:</span>' +
+        '<span class="value">' + location + '</span>' +
+        '</div>' +
+        '<div class="action-buttons">';
+      
+      if (mapsUrl) {
+        html += '<a href="' + mapsUrl + '" target="_blank" class="action-btn maps">&#x1F5FA;&#xFE0F; ' + mapsLabel + '</a>';
       }
-
-      html += `
-        <div class="info-row full-width">
-          <span class="emoji">📍</span>
-          <span class="label">Location</span>
-          <span class="value">${location}</span>
-        </div>
-      `;
-
+      html += '<button onclick="downloadCurrentGameICS()" class="action-btn calendar">&#x1F4C5; Add to Calendar</button>' +
+        '</div>';
+      
       return html;
+    }
+
+    // Render subscribe section
+    function renderSubscribeSection() {
+      const hint = isIOS ? "Opens in iPhone Calendar" : "Works with most calendar apps";
+      return '<div class="subscribe-section">' +
+        '<div class="section-label">Stay Updated</div>' +
+        '<div class="action-buttons">' +
+        '<a href="' + getSubscribeUrl() + '" class="action-btn subscribe">&#x1F4F2; Subscribe to Calendar</a>' +
+        '</div>' +
+        '<p class="subtitle" style="margin-top: 12px; font-size: 12px;">' + hint + '</p>' +
+        '</div>';
     }
 
     async function checkBasketballStatus() {
@@ -457,89 +403,68 @@
         todayEnd.setHours(23, 59, 59, 999);
 
         const todayResponse = await fetch(buildUrl(todayStart, todayEnd));
-        if (!todayResponse.ok) throw new Error(`HTTP ${todayResponse.status}`);
+        if (!todayResponse.ok) throw new Error("HTTP " + todayResponse.status);
         const todayData = await todayResponse.json();
         
-        if (todayData.error) throw new Error(todayData.error.message);
+        if (todayData.error) {
+          throw new Error(todayData.error.message || "Calendar API error");
+        }
 
         const todayGames = (todayData.items || []).filter(isBasketballEvent);
+
         wrapper.classList.remove("loading");
 
         if (todayGames.length > 0) {
           const game = todayGames[0];
+          currentGame = game;
           wrapper.classList.add("game-on");
-          const gameInfo = await renderGameInfo(game);
-          
-          el.innerHTML = `
-            <div class="header">
-              <span class="icon">🏀</span>
-              <div class="header-text">
-                <h2>Game Tonight!</h2>
-                <span class="subtitle">Get ready to play</span>
-              </div>
-            </div>
-            <div class="info-grid">${gameInfo}</div>
-            ${renderButtons(game)}
-          `;
+          el.innerHTML = '<span class="icon">&#x1F3C0;</span>' +
+            '<h2>Game Tonight!</h2>' +
+            renderGameInfo(game, false) +
+            renderSubscribeSection();
         } else {
-          // Fetch upcoming games (next 60 days)
           const futureStart = new Date();
           futureStart.setDate(futureStart.getDate() + 1);
           futureStart.setHours(0, 0, 0, 0);
+          
           const futureEnd = new Date();
           futureEnd.setDate(futureEnd.getDate() + 60);
 
           const futureResponse = await fetch(buildUrl(futureStart, futureEnd));
-          if (!futureResponse.ok) throw new Error(`HTTP ${futureResponse.status}`);
+          if (!futureResponse.ok) throw new Error("HTTP " + futureResponse.status);
           const futureData = await futureResponse.json();
 
           const upcomingGames = (futureData.items || []).filter(isBasketballEvent);
+
           wrapper.classList.add("no-game");
 
           if (upcomingGames.length > 0) {
             const nextGame = upcomingGames[0];
+            currentGame = nextGame;
             const daysUntil = getDaysUntil(nextGame);
-            const daysText = daysUntil === 1 ? "tomorrow" : `in ${daysUntil} days`;
-            const gameInfo = await renderGameInfo(nextGame, true);
+            const daysText = daysUntil === 1 ? "1 day" : daysUntil + " days";
 
-            el.innerHTML = `
-              <div class="header">
-                <span class="icon">😴</span>
-                <div class="header-text">
-                  <h2>No Game Today</h2>
-                  <span class="subtitle">Next game ${daysText}</span>
-                </div>
-              </div>
-              <div class="next-game">
-                <div class="next-game-label">Upcoming Game</div>
-                <div class="info-grid">${gameInfo}</div>
-                ${renderButtons(nextGame)}
-              </div>
-            `;
+            el.innerHTML = '<span class="icon">&#x1F634;</span>' +
+              '<h2>No Game Today</h2>' +
+              '<p class="subtitle">Next game in ' + daysText + '</p>' +
+              '<div class="next-game">' +
+              '<div class="next-game-label">Upcoming Game</div>' +
+              renderGameInfo(nextGame, true) +
+              '</div>' +
+              renderSubscribeSection();
           } else {
-            el.innerHTML = `
-              <div class="header">
-                <span class="icon">📭</span>
-                <div class="header-text">
-                  <h2>No Games Scheduled</h2>
-                  <span class="subtitle">No games in the next 60 days</span>
-                </div>
-              </div>
-            `;
+            el.innerHTML = '<span class="icon">&#x1F4ED;</span>' +
+              '<h2>No Games Scheduled</h2>' +
+              '<p class="subtitle">No upcoming games found in the next 60 days</p>' +
+              renderSubscribeSection();
           }
         }
       } catch (err) {
         wrapper.classList.remove("loading");
         wrapper.classList.add("error");
-        el.innerHTML = `
-          <div class="header">
-            <span class="icon">⚠️</span>
-            <div class="header-text">
-              <h2>Unable to Load</h2>
-              <span class="subtitle">Please try again later</span>
-            </div>
-          </div>
-        `;
+        el.innerHTML = '<span class="icon">&#x26A0;&#xFE0F;</span>' +
+          '<h2>Unable to Load</h2>' +
+          '<p class="subtitle">Could not fetch calendar data.<br>Please try again later.</p>';
         console.error("Calendar fetch error:", err);
       }
     }
