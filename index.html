@@ -338,9 +338,39 @@
       URL.revokeObjectURL(url);
     }
 
-    // Get subscribe URL for the calendar (webcal:// works on iOS, macOS, Outlook)
-    function getSubscribeUrl() {
-      return "webcal://calendar.google.com/calendar/ical/" + encodeURIComponent(calendarId) + "/public/basic.ics";
+    // Get subscribe URL for the calendar
+    function getSubscribeUrl(useHttps) {
+      const base = useHttps ? "https" : "webcal";
+      return base + "://calendar.google.com/calendar/ical/" + encodeURIComponent(calendarId) + "/public/basic.ics";
+    }
+
+    // Detect Safari browser
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    // Handle subscribe button click - Safari needs special handling
+    function handleSubscribe(e) {
+      e.preventDefault();
+      
+      // Try webcal:// first
+      const webcalUrl = getSubscribeUrl(false);
+      
+      if (isSafari) {
+        // Safari: use window.location for webcal://
+        window.location.href = webcalUrl;
+      } else {
+        // Other browsers: try opening webcal URL
+        window.location.href = webcalUrl;
+      }
+    }
+
+    // Copy calendar URL to clipboard (fallback option)
+    function copyCalendarUrl() {
+      const httpsUrl = getSubscribeUrl(true);
+      navigator.clipboard.writeText(httpsUrl).then(function() {
+        alert('Calendar URL copied!\n\nPaste this URL in your calendar app to subscribe:\n' + httpsUrl);
+      }).catch(function() {
+        prompt('Copy this URL to subscribe in your calendar app:', httpsUrl);
+      });
     }
 
     // Weather code to emoji and description mapping
@@ -633,13 +663,14 @@
 
     // Render subscribe section
     function renderSubscribeSection() {
-      const hint = isIOS ? "For Wechat users: Please open in default browser." : "Works with most calendar apps";
+      const hint = isIOS ? "For WeChat users: Open in Safari first" : "Works with most calendar apps";
       return '<div class="subscribe-section">' +
         '<div class="section-label">Stay Updated</div>' +
         '<div class="action-buttons">' +
-        '<a href="' + getSubscribeUrl() + '" class="action-btn subscribe">&#x1F4F2; Subscribe to Calendar</a>' +
+        '<a href="#" onclick="handleSubscribe(event)" class="action-btn subscribe">&#x1F4F2; Subscribe to Calendar</a>' +
         '</div>' +
         '<p class="subtitle" style="margin-top: 12px; font-size: 12px;">' + hint + '</p>' +
+        '<button onclick="copyCalendarUrl()" style="margin-top: 8px; background: none; border: none; color: #667eea; font-size: 12px; cursor: pointer; text-decoration: underline;">Copy calendar URL instead</button>' +
         '</div>';
     }
 
