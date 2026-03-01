@@ -233,6 +233,74 @@
       color: #666;
       font-weight: normal;
     }
+    .attendance-section {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+      border-radius: 12px;
+      border: 1px solid #9fa8da;
+    }
+    .attendance-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .attendance-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .attendance-stats .count-number {
+      font-size: 28px;
+      font-weight: 800;
+      color: #3f51b5;
+      line-height: 1;
+    }
+    .attendance-stats .count-label {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.3;
+    }
+    .attendance-stats .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #4CAF50;
+      border-radius: 50%;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .attend-btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.3s;
+      min-height: 44px;
+      white-space: nowrap;
+    }
+    .attend-btn:active {
+      transform: scale(0.97);
+    }
+    .attend-btn.attend {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+    }
+    .attend-btn.unattend {
+      background: linear-gradient(135deg, #ef5350, #e53935);
+      color: white;
+    }
+    .attendance-note {
+      font-size: 11px;
+      color: #777;
+      margin-top: 8px;
+      text-align: center;
+    }
     @media (max-width: 360px) {
       .card {
         padding: 20px 16px;
@@ -246,8 +314,17 @@
         font-size: 13px;
         padding: 8px 10px;
       }
+      .attend-btn {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+      .attendance-stats .count-number {
+        font-size: 24px;
+      }
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
   <div class="loading" id="wrapper">
@@ -674,6 +751,179 @@
         '</div>';
     }
 
+    // ========== Attendance System ==========
+    // Uses localStorage to prevent duplicate RSVPs per device.
+    // Uses Firebase Realtime Database for shared real-time counts.
+    // Each game gets its own attendance bucket (keyed by event ID),
+    // so stats are automatically separated per game session.
+
+    // Firebase config — fill in to enable shared real-time attendance.
+    // Without this, attendance works in local-only mode (per device).
+    // Setup: https://console.firebase.google.com/ → Create project →
+    //   Realtime Database → Create Database → Project Settings → Web app config
+    // Suggested security rules for the database:
+    //   { "rules": { "attendance": { ".read": true, ".write": true } } }
+    const firebaseConfig = {
+      apiKey: "AIzaSyDOzd7ni9fCX8k98bgoYciOE54lf6_7CZc",
+      authDomain: "basketball-status.firebaseapp.com",
+      databaseURL: "https://basketball-status-default-rtdb.firebaseio.com",
+      projectId: "basketball-status",
+      storageBucket: "basketball-status.firebasestorage.app",
+      messagingSenderId: "151829221282",
+      appId: "1:151829221282:web:005eba36909d77352dacfb"
+    };
+
+    let firebaseReady = false;
+    let attendanceListener = null;
+    let currentGameId = null;
+
+    function initFirebase() {
+      if (firebaseConfig.databaseURL) {
+        try {
+          firebase.initializeApp(firebaseConfig);
+          firebaseReady = true;
+        } catch (e) {
+          console.warn("Firebase init failed:", e);
+        }
+      }
+    }
+
+    // Stable per-device ID stored in localStorage
+    function getDeviceId() {
+      let id = localStorage.getItem('bball_device_id');
+      if (!id) {
+        id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('bball_device_id', id);
+      }
+      return id;
+    }
+
+    function hasRSVP(gameId) {
+      return localStorage.getItem('bball_rsvp_' + gameId) === 'true';
+    }
+
+    function setRSVP(gameId, attending) {
+      if (attending) {
+        localStorage.setItem('bball_rsvp_' + gameId, 'true');
+      } else {
+        localStorage.removeItem('bball_rsvp_' + gameId);
+      }
+    }
+
+    // Remove RSVP entries for old games so localStorage stays clean
+    function cleanupOldRSVPs(currentId) {
+      var keys = Object.keys(localStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf('bball_rsvp_') === 0 && keys[i] !== 'bball_rsvp_' + currentId) {
+          localStorage.removeItem(keys[i]);
+        }
+      }
+    }
+
+    // Firebase keys cannot contain . # $ / [ ]
+    function sanitizeKey(id) {
+      return id.replace(/[.#$/\[\]]/g, '_');
+    }
+
+    function setupAttendance(gameId) {
+      if (attendanceListener && firebaseReady) {
+        attendanceListener.off();
+      }
+
+      currentGameId = gameId;
+      cleanupOldRSVPs(gameId);
+
+      var isAttending = hasRSVP(gameId);
+      updateAttendButton(isAttending);
+
+      if (firebaseReady) {
+        var gameKey = sanitizeKey(gameId);
+        attendanceListener = firebase.database().ref('attendance/' + gameKey);
+
+        // Real-time listener — count = number of device entries
+        attendanceListener.on('value', function(snapshot) {
+          var devices = snapshot.val() || {};
+          var count = Object.keys(devices).length;
+          updateAttendanceCount(count);
+        });
+
+        // Sync localStorage ↔ Firebase on load
+        var deviceId = getDeviceId();
+        attendanceListener.child(deviceId).once('value', function(snapshot) {
+          var inFirebase = snapshot.val() === true;
+          if (isAttending && !inFirebase) {
+            attendanceListener.child(deviceId).set(true);
+          } else if (!isAttending && inFirebase) {
+            attendanceListener.child(deviceId).remove();
+          }
+        });
+      } else {
+        updateAttendanceCount(isAttending ? 1 : 0);
+      }
+    }
+
+    function toggleAttendance() {
+      if (!currentGameId) return;
+
+      var newStatus = !hasRSVP(currentGameId);
+      setRSVP(currentGameId, newStatus);
+      updateAttendButton(newStatus);
+
+      if (firebaseReady) {
+        var gameKey = sanitizeKey(currentGameId);
+        var deviceId = getDeviceId();
+        var deviceRef = firebase.database().ref('attendance/' + gameKey + '/' + deviceId);
+
+        if (newStatus) {
+          deviceRef.set(true);
+        } else {
+          deviceRef.remove();
+        }
+      } else {
+        updateAttendanceCount(newStatus ? 1 : 0);
+      }
+    }
+
+    function updateAttendButton(isAttending) {
+      var btn = document.getElementById('attend-btn');
+      if (!btn) return;
+      if (isAttending) {
+        btn.className = 'attend-btn unattend';
+        btn.textContent = "\u270B I won't attend";
+      } else {
+        btn.className = 'attend-btn attend';
+        btn.textContent = '\uD83D\uDE4B I will attend';
+      }
+    }
+
+    function updateAttendanceCount(count) {
+      var el = document.getElementById('attendance-count');
+      if (el) el.textContent = count;
+      var label = document.getElementById('attendance-label');
+      if (label) label.textContent = count === 1 ? 'person attending' : 'people attending';
+    }
+
+    function renderAttendanceSection(gameId) {
+      var isAttending = hasRSVP(gameId);
+      var btnClass = isAttending ? 'unattend' : 'attend';
+      var btnText = isAttending ? "\u270B I won't attend" : '\uD83D\uDE4B I will attend';
+
+      return '<div class="attendance-section">' +
+        '<div class="attendance-header">' +
+        '<div class="attendance-stats">' +
+        '<span class="live-dot"></span>' +
+        '<span class="count-number" id="attendance-count">0</span>' +
+        '<span class="count-label" id="attendance-label">people attending</span>' +
+        '</div>' +
+        '<button id="attend-btn" class="attend-btn ' + btnClass + '" onclick="toggleAttendance()">' + btnText + '</button>' +
+        '</div>' +
+        (!firebaseReady ? '<div class="attendance-note">Local mode \u2014 configure Firebase for shared real-time counts</div>' : '') +
+        '</div>';
+    }
+
+    initFirebase();
+    // ========== End Attendance System ==========
+
     async function checkBasketballStatus() {
       const wrapper = document.getElementById("wrapper");
       const el = document.getElementById("status");
@@ -707,7 +957,9 @@
           el.innerHTML = '<span class="icon">&#x1F3C0;</span>' +
             '<h2>Game Tonight!</h2>' +
             renderGameInfo(game, false, weather) +
+            renderAttendanceSection(game.id) +
             renderSubscribeSection();
+          setupAttendance(game.id);
         } else {
           const futureStart = new Date();
           futureStart.setDate(futureStart.getDate() + 1);
@@ -740,7 +992,9 @@
               '<div class="next-game-label">Upcoming Game</div>' +
               renderGameInfo(nextGame, true, weather) +
               '</div>' +
+              renderAttendanceSection(nextGame.id) +
               renderSubscribeSection();
+            setupAttendance(nextGame.id);
           } else {
             el.innerHTML = '<span class="icon">&#x1F4ED;</span>' +
               '<h2>No Games Scheduled</h2>' +
